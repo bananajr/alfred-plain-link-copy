@@ -26,31 +26,53 @@ function run(argv) {
     if (!app.running()) {
       continue;
     }
-    var res = browser.fn(app);
-    console.log(res.title);
-    console.log(res.url);
-    if (res.hasOwnProperty('title') && res.hasOwnProperty('url')) {
-      copyToClipboard(res.url, res.title);
-      return res.title + ' - ' + res.url;
+    var p = browser.fn(app);
+    console.log(p.title);
+    console.log(p.url);
+    if (p.hasOwnProperty('title') && p.hasOwnProperty('url')) {
+      p = customize(p);
+      copyToClipboard(p);
+      return p.title + ' - ' + p.url;
     }
   }
   return 'FAIL';
 }
 
 
+function customize(p) {
+  var sourceIndex = p.title.lastIndexOf(' - ');
+  if (sourceIndex < 0) {
+     sourceIndex = p.title.lastIndexOf(' | ');
+  }
+  if (sourceIndex >= 0) {
+    p.source = p.title.substr(sourceIndex + 3);
+    p.title = p.title.substr(0, sourceIndex);
+  }
+  else {
+    p.source = p.url.replace('http://','').replace('https://','').split(/[/?#]/)[0];
+    var dcomps = p.source.split('.');
+    if (dcomps.length > 2) {
+      dcomps = dcomps.slice(-2);
+      console.log('dcomps length = ', dcomps.length);
+    }
+    p.source = dcomps.join('.');
+  }
+  return p;
+}
 
-function copyToClipboard(url, title) {
 
-  var htmlStr = '<a href="' + url + '">' + title +'</a>';
-  var mdStr   = '[' + title + '](' + url + ')';
-  var rtfStr  = '{\\rtf1\\ansi\deff0{\\field{\\*\\fldinst{HYPERLINK "' + url + '"}}{\\fldrslt ' + title + '}}}';
+function copyToClipboard(p) {
+  var htmlStr = '<a href="' + p.url + '">' + p.title +'</a>';
+  var mdStr   = '[' + p.title + '](' + p.url + ')';
+  var rtfStr  = '{\\rtf1\\ansi\deff0{\\field{\\*\\fldinst{HYPERLINK "' + p.url +
+                '"}}{\\fldrslt ' + p.title + '}}}';
 
-  // remove this if you don't want the domain appended in parenthesis
-  var domainStr = url.replace('http://','').replace('https://','').split(/[/?#]/)[0];
-  domainStr = ' (' + domainStr + ')';
-  htmlStr += domainStr;
-  mdStr   += domainStr;
-  rtfStr  += domainStr;
+  if (p.hasOwnProperty('source')) {
+	var sourceStr = ' (' + p.source + ')';
+    htmlStr += sourceStr;
+    mdStr   += sourceStr;
+    rtfStr  += sourceStr;
+  }
 
   var pb = $.NSPasteboard.generalPasteboard;
   pb.clearContents;
